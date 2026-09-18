@@ -1,0 +1,28 @@
+services:
+  # 一次性验收服务：构建并运行完整 Vitest 套件，结束后退出。
+  verify:
+    build:
+      context: .
+      target: build
+    image: transcript-redactor-verify
+
+    working_dir: /app
+    command: ["npm", "test"]
+    restart: "no"
+
+  # 页面服务：仅在 verify 成功完成后启动。
+  web:
+    build:
+      context: .
+      target: runtime
+    image: transcript-redactor-web
+    environment:
+      # 容器内监听端口（nginx 模板替换）；可用 WEB_PORT 覆盖。
+      WEB_PORT: "${WEB_PORT:-8080}"
+    ports:
+      # 宿主机发布端口同样由 WEB_PORT 覆盖，默认 8080。
+      - "${WEB_PORT:-8080}:${WEB_PORT:-8080}"
+    depends_on:
+      verify:
+        condition: service_completed_successfully
+    restart: unless-stopped
